@@ -1,0 +1,8 @@
+# External World Config
+namespace: external-services
+
+parser:
+  image: crawler-parser
+  port: 8084
+  replicaCount: 1
+  failRate: "0.25"

@@ -1,0 +1,39 @@
+# Common App Settings
+global:
+  namespace: crawler-system
+  imagePullPolicy: IfNotPresent
+
+# Services Configuration
+discovery:
+  image: crawler-url-discovery
+  port: 8081
+  replicaCount: 1
+
+processor:
+  image: crawler-processor
+  port: 8083
+  replicaCount: 1
+  db:
+    host: crawler-pg-db
+    port: 5432
+  redis:
+    host: crawler-cache-redis
+    port: 6379
+
+fetcher:
+  image: crawler-fetcher
+  port: 8082
+  replicaCount: 1
+
+sensor:
+  image: crawler-sensor
+  port: 8085
+  replicaCount: 1
+
+# Shared Infrastructure Links (Inside K8s)
+kafka:
+  bootstrapServers: kafka:9092
+
+# External Services Links
+parser:
+  url: http://parser.external-services.svc.cluster.local:8084/api/v1/parser/process

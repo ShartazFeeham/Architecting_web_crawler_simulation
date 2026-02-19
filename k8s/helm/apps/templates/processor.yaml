@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: processor
+spec:
+  ports:
+    - port: {{ .Values.processor.port }}
+      targetPort: 8083
+  selector:
+    app: processor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: processor
+spec:
+  replicas: {{ .Values.processor.replicaCount }}
+  selector:
+    matchLabels:
+      app: processor
+  template:
+    metadata:
+      labels:
+        app: processor
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: processor
+          image: {{ .Values.processor.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+            - name: DB_HOST
+              value: {{ .Values.processor.db.host | quote }}
+            - name: DB_PORT
+              value: {{ .Values.processor.db.port | quote }}
+            - name: DB_NAME
+              value: "crawler_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: crawler-db-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: crawler-db-secret
+                  key: POSTGRES_PASSWORD
+            - name: REDIS_HOST
+              value: {{ .Values.processor.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.processor.redis.port | quote }}
+          ports:
+            - containerPort: 8083
+          livenessProbe:
+            tcpSocket:
+              port: 8083
+            initialDelaySeconds: 40
+          readinessProbe:
+            tcpSocket:
+              port: 8083
+            initialDelaySeconds: 40

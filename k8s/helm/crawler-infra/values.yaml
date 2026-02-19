@@ -1,0 +1,22 @@
+# Shared Infrastructure Values
+
+postgres:
+  enabled: true
+  image: postgres:14.15-alpine3.20
+  dbName: crawler_db
+  user: user
+  password: password
+  port: 5432
+  storage: 1Gi
+
+redis:
+  enabled: true
+  image: redis:7.4.2-alpine
+  port: 6379
+
+kafka:
+  enabled: true
+  image: confluentinc/cp-kafka:7.8.0
+  zookeeperImage: confluentinc/cp-zookeeper:7.8.0
+  replicaCount: 1
+  port: 9092

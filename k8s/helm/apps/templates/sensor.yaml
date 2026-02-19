@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensor
+spec:
+  ports:
+    - port: {{ .Values.sensor.port }}
+      targetPort: 8085
+  selector:
+    app: sensor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor
+spec:
+  replicas: {{ .Values.sensor.replicaCount }}
+  selector:
+    matchLabels:
+      app: sensor
+  template:
+    metadata:
+      labels:
+        app: sensor
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: sensor
+          image: {{ .Values.sensor.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+          ports:
+            - containerPort: 8085
+          livenessProbe:
+            tcpSocket:
+              port: 8085
+            initialDelaySeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8085
+            initialDelaySeconds: 30

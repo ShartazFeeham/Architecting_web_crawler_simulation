@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-discovery
+spec:
+  ports:
+    - port: {{ .Values.discovery.port }}
+      targetPort: 8081
+  selector:
+    app: url-discovery
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-discovery
+spec:
+  replicas: {{ .Values.discovery.replicaCount }}
+  selector:
+    matchLabels:
+      app: url-discovery
+  template:
+    metadata:
+      labels:
+        app: url-discovery
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: url-discovery
+          image: {{ .Values.discovery.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+          ports:
+            - containerPort: 8081
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10

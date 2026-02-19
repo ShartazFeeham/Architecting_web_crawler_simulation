@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crawler-db-secret
+type: Opaque
+stringData:
+  POSTGRES_USER: {{ .Values.postgres.user | quote }}
+  POSTGRES_PASSWORD: {{ .Values.postgres.password | quote }}
+  POSTGRES_DB: {{ .Values.postgres.dbName | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crawler-pg-db
+spec:
+  ports:
+    - port: {{ .Values.postgres.port }}
+      targetPort: 5432
+  selector:
+    app: crawler-pg-db
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: crawler-pg-db
+spec:
+  serviceName: "crawler-pg-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-pg-db
+  template:
+    metadata:
+      labels:
+        app: crawler-pg-db
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: crawler-db-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: crawler-db-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: crawler-db-secret
+                  key: POSTGRES_DB
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}

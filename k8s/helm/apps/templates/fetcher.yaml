@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fetcher
+spec:
+  ports:
+    - port: {{ .Values.fetcher.port }}
+      targetPort: 8082
+  selector:
+    app: fetcher
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fetcher
+spec:
+  replicas: {{ .Values.fetcher.replicaCount }}
+  selector:
+    matchLabels:
+      app: fetcher
+  template:
+    metadata:
+      labels:
+        app: fetcher
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: fetcher
+          image: {{ .Values.fetcher.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+            - name: PARSER_URL
+              value: {{ .Values.parser.url | quote }}
+            - name: SENSOR_URL
+              value: "http://sensor:8085/api/v1/sensor/inspect"
+          ports:
+            - containerPort: 8082
+          livenessProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 40
+          readinessProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 40

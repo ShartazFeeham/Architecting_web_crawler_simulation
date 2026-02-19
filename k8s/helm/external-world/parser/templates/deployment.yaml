@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: parser
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.parser.port }}
+      targetPort: 8084
+  selector:
+    app: parser
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parser
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.parser.replicaCount }}
+  selector:
+    matchLabels:
+      app: parser
+  template:
+    metadata:
+      labels:
+        app: parser
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: parser
+          image: {{ .Values.parser.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: PARSER_FAIL_RATE
+              value: {{ .Values.parser.failRate | quote }}
+          ports:
+            - containerPort: 8084
+          livenessProbe:
+            tcpSocket:
+              port: 8084
+            initialDelaySeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8084
+            initialDelaySeconds: 30

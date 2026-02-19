@@ -150,24 +150,21 @@ The system is designed for a cloud-native deployment on AWS using standard enter
     -   *Connectivity*: Processor service connects via IAM-based authentication or secret-managed credentials.
 
 ### B. Orchestration & Packaging
--   **Kubernetes (EKS)**: The primary execution environment for all microservices.
--   **Helm**: Every service is bundled as a Helm chart to manage templated YAMLs, enabling easy environment-specific configurations (e.g., dev/prod jitter values).
+-   **Kubernetes (Local/EKS)**: The primary execution environment for all microservices.
+-   **Helm**: Used for granular deployment management via three main components:
+    -   `crawler-infra`: Shared resources (Postgres, Redis, Kafka).
+    -   `crawler-apps`: Core business logic (Discovery, Processor, Fetcher, Sensor).
+    -   `external-parser`: Treated as a "different world" service in a separate namespace.
 
-### C. Traffic Management & Service Mesh
--   **Nginx Ingress Controller**: 
-    -   Entry point for external triggers (Discovery Service) and querying results (Processor Service).
-    -   Handles path-based routing and SSL termination.
--   **Istio Service Mesh**:
-    -   **mTLS**: Ensures all internal traffic (e.g., Fetcher to Parser) is encrypted and authenticated.
-    -   **Observability**: Provides granular metrics on service-to-service latency (especially tracking the 100-1000ms jitter).
-    -   **Traffic Control**: Enables sophisticated canary deployments or circuit breaking for the Parser/Sensor endpoints.
+### C. Namespace Isolation
+-   `crawler-system`: Contains all internal crawler components and infrastructure.
+-   `external-services`: Contains the Parser service, completely isolated from the crawler's internal networking logic except via standard cluster-local DNS (`parser.external-services.svc.cluster.local`).
 
 ### D. Deployment Flow
-1.  **Helm Chart** deployment to the `crawler` namespace.
-2.  **Istio Sidecar Injection** for automatic mesh membership.
-3.  **Ingress Rules** to expose the 4 primary REST endpoints.
-4.  **Debezium Connector** deployment via Kafka Connect on k8s to bridge RDS and Kafka.
-5.  **External Service Integration**: The **Parser Service** is deployed independently or treated as a third-party API, residing outside the main `crawler` application lifecycle to simulate real-world external dependencies.
+1.  **Namespace Creation**: Setup `crawler-system` and `external-services`.
+2.  **Infra Layer**: Deploy StatefulSets for Postgres and Deployments for Kafka/Redis.
+3.  **App Layer**: Deploy microservices with structured liveness/readiness probes.
+4.  **External Layer**: Deploy the Parser in its unique operational silo.
 
 ---
 
