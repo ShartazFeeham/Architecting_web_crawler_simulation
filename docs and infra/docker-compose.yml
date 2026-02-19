@@ -1,0 +1,204 @@
+version: "3.8"
+name: "C.A.D.S.O.K."
+
+x-common-kafka-environment: &common-kafka-environment
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+  KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  KAFKA_MIN_INSYNC_REPLICAS: 1
+  KAFKA_NUM_PARTITIONS: 3
+  KAFKA_LOG_RETENTION_HOURS: 24
+  KAFKA_LOG_RETENTION_BYTES: 1073741824 # 1GB
+  KAFKA_DELETE_TOPIC_ENABLE: true
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+
+services:
+
+  # 🚀 DATABASE SERVICES 🚀
+
+  # Postgres database for processor-service
+  storage-processor-pg-db:
+    restart: always
+    image: postgres:14.15-alpine3.20
+    container_name: processor-pg-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - processor-pg-db_local_data:/var/lib/postgresql/data
+    # 🚨 CDC CONFIGURATION ADDED 🚨
+    command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
+
+  # Postgres database for discovery-service
+  storage-discovery-pg-db:
+    restart: always
+    image: postgres:14.15-alpine3.20
+    container_name: discovery-pg-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - discovery-pg-db_local_data:/var/lib/postgresql/data
+    # 🚨 CDC CONFIGURATION ADDED 🚨
+    command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
+
+  # Postgres database for fetcher-service
+  storage-fetcher-pg-db:
+    restart: always
+    image: postgres:14.15-alpine3.20
+    container_name: fetcher-pg-db
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - fetcher-pg-db_local_data:/var/lib/postgresql/data
+    # 🚨 CDC CONFIGURATION ADDED 🚨
+    command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
+
+  # PG Admin for postgres database UI
+  storage-pg-admin-postgres-ui:
+    restart: always
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    ports:
+      - "8088:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+  # 🚀 KAFKA ECOSYSTEM SERVICES 🚀
+
+  zookeeper:
+    restart: always
+    image: confluentinc/cp-zookeeper:7.8.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zookeeper:2888:3888
+
+  kafka1:
+    restart: always
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka1
+    container_name: kafka1
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:19092,EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092,DOCKER://host.docker.internal:29092
+      KAFKA_BROKER_ID: 1
+      <<: *common-kafka-environment
+    depends_on:
+      - zookeeper
+
+  kafka2:
+    restart: always
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka2
+    container_name: kafka2
+    ports:
+      - "9093:9093"
+      - "29093:29093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:19093,EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9093,DOCKER://host.docker.internal:29093
+      KAFKA_BROKER_ID: 2
+      <<: *common-kafka-environment
+    depends_on:
+      - zookeeper
+
+  kafka3:
+    restart: always
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka3
+    container_name: kafka3
+    ports:
+      - "9094:9094"
+      - "29094:29094"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka3:19094,EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9094,DOCKER://host.docker.internal:29094
+      KAFKA_BROKER_ID: 3
+      <<: *common-kafka-environment
+    depends_on:
+      - zookeeper
+
+  schema-registry:
+    restart: always
+    image: confluentinc/cp-schema-registry:7.8.0
+    hostname: schema-registry
+    container_name: schema-registry
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:19092,PLAINTEXT://kafka3:19092
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+
+  # 🚀 DEBEZIUM CONNECT SERVICE ADDED FOR OUTBOX PATTERN 🚀
+  debezium-connect:
+    restart: always
+    image: debezium/connect:2.7.3.Final
+    hostname: debezium-connect
+    container_name: debezium-connect
+    ports:
+      - "8083:8083" # Kafka Connect REST API port
+    environment:
+      # Use INTERNAL listener of kafka1
+      BOOTSTRAP_SERVERS: kafka1:19092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      # Make sure Connect can reach Zookeeper
+      ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - zookeeper
+
+  # ☕ KAFKA UI (KAFKADROP) ☕
+  kafdrop:
+    restart: always
+    image: obsidiandynamics/kafdrop
+    hostname: kafdrop
+    container_name: kafdrop
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka1:19092,kafka2:19092,kafka3:19092 # Use internal broker ports
+      JVM_OPTS: "-Xms32M -Xmx64M"
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+
+volumes:
+  processor-pg-db_local_data:
+  discovery-pg-db_local_data:
+  fetcher-pg-db_local_data:
+  pgadmin-data:

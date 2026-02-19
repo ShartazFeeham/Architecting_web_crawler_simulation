@@ -1,0 +1,241 @@
+# Crawler System - Architectural Detail
+
+This document outlines the architectural design and implementation details for the distributed Crawler system. The focus is on architectural beauty, scalability, and robust event-driven communication.
+
+## 1. System Overview
+
+The system is a distributed microservices-based crawler that follows the **Transactional Outbox Pattern** for reliable event delivery and uses **Kafka** as the primary message backbone.
+
+### Core Services
+1.  **URL Discovery Service**: Generates potential targets.
+2.  **Processor Service**: Managed the source of truth (Database) and handles duplicate detection/updates.
+3.  **Fetcher Service**: Orchestrates the parsing and sensing logic with retry capabilities.
+4.  **Parser (External) Service**: Simulates HTML/Data parsing with configurable noise (treated as an external third-party service).
+5.  **Sensor (Mock) Service**: Simulates site health/availability checks.
+
+---
+
+## 2. Shared Data Standards
+
+-   **IDs**: All primary identifiers must be of type `Long` (no UUIDs).
+-   **Communication**: Asynchronous via Kafka for high-throughput flows; Synchronous REST for external service calls (Parser/Sensor).
+
+---
+
+## 3. Event Infrastructure
+
+The system relies on a high-availability event backbone for all asynchronous communication.
+
+-   **Confluent Kafka**: The core message broker for handling `URL_DISCOVERED`, `URL_CREATED`, and `fetcher.results`.
+-   **Zookeeper**: Provides coordination and state management for the Kafka cluster.
+-   **Kafkadrop**: Web UI for monitoring topics, consumer groups, and message flows.
+
+---
+
+## 4. Detailed Service Breakdown
+
+### A. URL Discovery Service
+-   **Responsibility**: Generating seed URLs for the crawler.
+-   **Endpoint**: `POST /api/v1/discovery/generate` 
+    -   **Payload**: `{ "count": 500 }` (optional, default 100, max 100000).
+-   **Logic**:
+    -   Generates `N` realistic URLs (e.g., `https://ecommerce.com/products/item-123`).
+    -   Assigns a unique **Process ID** (Long) to the batch.
+    -   Publishes a `URL_DISCOVERED` event to Kafka topic `discovery.urls` for each URL.
+    -   Returns the **Process ID** to the caller.
+
+### B. Processor Service
+-   **Responsibility**: Single source of truth for URL state and data.
+-   **Database**: PostgreSQL (or similar relational DB).
+-   **Flow 1 (Ingestion)**:
+    -   Consumes from `discovery.urls`.
+    -   Checks DB for duplicate URLs.
+    -   If new: Saves to `urls` table with status `PENDING`.
+-   **Flow 2 (Update)**:
+    -   Consumes from `fetcher.results`.
+    -   Updates the record with parsing data and sensor metrics.
+    -   Sets status to `COMPLETED` or `FAILED`.
+-   **Outbox Pattern**:
+    -   Uses **Debezium** to tail the DB transaction log (WAL).
+    -   Publishes `URL_CREATED` events to `processor.outbox.urls` whenever a new record is inserted.
+
+### C. Fetcher Service
+-   **Responsibility**: Orchestration and Resiliency.
+-   **Flow**:
+    1.  Consumes from `processor.outbox.urls`.
+    2.  **Call Parser**:
+        -   `POST /api/v1/parser/process`
+        -   Jitter: 100-1000ms.
+        -   Failure Rate: 25% (No retries).
+    3.  **Call Sensor** (Only if Parser succeeds):
+        -   `POST /api/v1/sensor/inspect`
+        -   Jitter: 100-300ms.
+        -   Failure Rate: 25%.
+        -   **Retry Strategy**: 1 retry on Sensor failure.
+    4.  **Result Propagation**:
+        -   Publishes `SUCCESS` or `FAILURE` event to `fetcher.results` with all collected data.
+
+### D. Mock Services (Parser & Sensor)
+-   **Parser Service**:
+    -   Returns: JSON with 5-10 realistic fields (e.g., `pageTitle`, `pageMetaTags`, `pageMetaDescription`, `contentSize`, `normalizedContents`, `popularity`), etc. 
+-   **Sensor Service**:
+    -   Returns: SSL status, Server latency, and Site availability and most importantly the conntent sensorship (true or false), 25% false - meaning prohibited content. 
+
+---
+
+## 5. Endpoint Definitions (Total 4)
+
+| Service       | Method | Path                             | Description                                 |
+| :------------ | :----- | :------------------------------- | :------------------------------------------ |
+| **Discovery** | `POST` | `/api/v1/discovery/generate`     | Trigger URL generation (returns Process ID) |
+| **Parser**    | `POST` | `/api/v1/parser/process`         | External parsing logic                      |
+| **Sensor**    | `POST` | `/api/v1/sensor/inspect`         | Mock sensing logic                          |
+| **Processor** | `GET`  | `/api/v1/processor/records/{id}` | View all results for a specific Process ID  |
+
+---
+
+## 6. Configurable Parameters
+
+| Parameter             | Default Value | Description                       |
+| :-------------------- | :------------ | :-------------------------------- |
+| `parser.jitter.min`   | 100ms         | Minimum delay for parser response |
+| `parser.jitter.max`   | 1000ms        | Maximum delay for parser response |
+| `parser.fail.rate`    | 0.25          | Probability of Parser failure     |
+| `sensor.jitter.min`   | 100ms         | Minimum delay for sensor response |
+| `sensor.jitter.max`   | 300ms         | Maximum delay for sensor response |
+| `sensor.fail.rate`    | 0.25          | Probability of Sensor failure     |
+| `discovery.max.count` | 100000        | Maximum URLs per request          |
+
+---
+
+## 7. Event Logic Diagram
+
+```mermaid
+sequenceDiagram
+    participant D as Discovery Service
+    participant K as Kafka (Topic: discovery.urls)
+    participant P as Processor Service
+    participant DB as Postgres DB
+    participant DZ as Debezium (Outbox)
+    participant F as Fetcher Service
+    participant PS as Parser Service
+    participant SS as Sensor Service
+
+    D->>K: Publish 100-100000 URLs
+    K->>P: Consume URLs
+    P->>DB: Check & Insert (New Only)
+    DB-->>DZ: Write to WAL
+    DZ->>F: Publish "URL_CREATED" Event
+    F->>PS: Call Parser (Jitter + Fail Rate)
+    alt Parser Success
+        F->>SS: Call Sensor (Jitter + Fail Rate + Retry)
+        SS-->>F: Sensor Data
+        F->>K: Publish SUCCESS (Topic: fetcher.results)
+    else Parser Fail
+        F->>K: Publish FAILURE (Topic: fetcher.results)
+    end
+    K->>P: Consume results & update DB
+    P->>DB: Update Record (Data + Status)
+```
+
+---
+
+## 8. Production Infrastructure & Deployment
+
+The system is designed for a cloud-native deployment on AWS using standard enterprise tooling.
+
+### A. Cloud & Data Layer
+-   **AWS RDS (PostgreSQL)**: Scalable, managed relational database.
+    -   *Logical Replication*: Required for Debezium to capture changes.
+    -   *Connectivity*: Processor service connects via IAM-based authentication or secret-managed credentials.
+
+### B. Orchestration & Packaging
+-   **Kubernetes (EKS)**: The primary execution environment for all microservices.
+-   **Helm**: Every service is bundled as a Helm chart to manage templated YAMLs, enabling easy environment-specific configurations (e.g., dev/prod jitter values).
+
+### C. Traffic Management & Service Mesh
+-   **Nginx Ingress Controller**: 
+    -   Entry point for external triggers (Discovery Service) and querying results (Processor Service).
+    -   Handles path-based routing and SSL termination.
+-   **Istio Service Mesh**:
+    -   **mTLS**: Ensures all internal traffic (e.g., Fetcher to Parser) is encrypted and authenticated.
+    -   **Observability**: Provides granular metrics on service-to-service latency (especially tracking the 100-1000ms jitter).
+    -   **Traffic Control**: Enables sophisticated canary deployments or circuit breaking for the Parser/Sensor endpoints.
+
+### D. Deployment Flow
+1.  **Helm Chart** deployment to the `crawler` namespace.
+2.  **Istio Sidecar Injection** for automatic mesh membership.
+3.  **Ingress Rules** to expose the 4 primary REST endpoints.
+4.  **Debezium Connector** deployment via Kafka Connect on k8s to bridge RDS and Kafka.
+5.  **External Service Integration**: The **Parser Service** is deployed independently or treated as a third-party API, residing outside the main `crawler` application lifecycle to simulate real-world external dependencies.
+
+---
+
+## 9. Deployment Profiles
+
+The system supports two primary operational profiles to bridge the gap between development and production.
+
+### A. Dev Profile (`dev`)
+-   **Environment**: Local developer workstation.
+    -   **Orchestration**: Docker Compose.
+    -   **Database**: Containerized PostgreSQL.
+    -   **Kafka**: Local Confluent Kafka + Zookeeper containers.
+    -   **Monitoring**: Kafkadrop accessible via `localhost`.
+    -   **Configuration**: Optimized for fast feedback loops and debugging.
+
+### B. Prod Profile (`prod`)
+-   **Environment**: AWS / Cloud-native.
+    -   **Orchestration**: Kubernetes (EKS) managed via Helm.
+    -   **Database**: AWS RDS (PostgreSQL) with Logical Replication.
+    -   **Kafka**: Dedicated Confluent Kafka cluster.
+    -   **Service Mesh**: Istio enabled with mTLS and observability sidecars.
+    -   **Ingress**: Nginx Ingress Controller for secure, public-facing endpoints.
+    -   **Configuration**: Scaled for high availability and strict security.
+---
+
+## 10. Automation & Tooling
+
+The system includes a suite of scripts for seamless lifecycle management.
+
+### A. Lifecycle Scripts (`run_all.sh` / `stop_all.sh`)
+-   **`run_all.sh`**: 
+    -   Starts all infrastructure (Kafka, Postgres, Zookeeper).
+    -   Builds and starts all microservices (Processor, Discovery, Fetcher, etc.).
+    -   Supports `restart` flag to wipe state and reboot.
+-   **`stop_all.sh`**: Gracefully shuts down all containers and removes networks.
+
+### B. Verification Tooling (`test-runner.sh`)
+-   **Execution Flow**:
+    1.  Hits `POST /api/v1/discovery/generate` (using default count).
+    2.  Captures the returned **Process ID**.
+    3.  Sleeps for a **10-second** jitter wait.
+    4.  Hits `GET /api/v1/processor/records/{processId}`.
+    5.  Validates that all generated URLs have been processed and stored with enrichment data.
+
+---
+
+## 11. Observability & Configuration
+
+A production-ready system must be visible and configurable via external sources of truth.
+
+### A. Logging & Tracing
+-   **Structured Logging**: All services emit logs in JSON format for ingestion by ELK (Elasticsearch, Logstash, Kibana) or AWS CloudWatch.
+-   **Distributed Tracing**: Implementation of **OpenTelemetry** with **Jaeger** or **AWS X-Ray**. Every request carries a Trace ID from Discovery through Kafka to the final DB update.
+
+### B. Environment & Secret Management
+-   **Dev**: Local environment variables managed via `.env` files.
+-   **Prod**: 
+    -   **AWS Secrets Manager**: All sensitive data (DB passwords, Kafka credentials, Parser API keys) are fetched at runtime or injected via K8s secrets synchronized with AWS.
+    -   **Centralized Config**: Non-sensitive configs (jitters, failure rates) are managed via K8s ConfigMaps.
+
+---
+
+## 12. Architectural Best Practices
+
+To ensure "Architectural Beauty" and production stability, the following patterns are strictly enforced:
+
+1.  **Idempotency**: The Processor service ensures that processing the same Kafka message multiple times (on retry) does not result in duplicate DB entries or inconsistent states.
+2.  **Dead Letter Queues (DLQ)**: Failed Kafka messages (e.g., unparseable events) are routed to a `.dlq` topic for manual inspection rather than blocking the consumer.
+3.  **Graceful Shutdown**: Services capture termination signals to finish current processing and close Kafka consumers/DB connections properly.
+4.  **Liveness & Readiness Probes**: Kubernetes-native checks ensure traffic is only routed to healthy services and automatically restarts crashed instances.
+5.  **Anti-Corruption Layer**: Proper DTO mappings between Kafka events and internal domain models to prevent leaking infrastructure details into the business logic.
