@@ -50,7 +50,7 @@ The system relies on a high-availability event backbone for all asynchronous com
 -   **Flow 1 (Ingestion)**:
     -   Consumes from `discovery.urls`.
     -   Checks DB for duplicate URLs.
-    -   If new: Saves to `urls` table with status `PENDING`.
+    -   If new: Saves to `crawl_records` table with status `PENDING`.
 -   **Flow 2 (Update)**:
     -   Consumes from `fetcher.results`.
     -   Updates the record with parsing data and sensor metrics.
@@ -214,15 +214,44 @@ The system includes a suite of scripts for seamless lifecycle management.
 
 ---
 
-## 11. Observability & Configuration
+## 11. Containerization & Build Automation
+
+To ensure cross-platform consistency (Mac/Linux/Windows) and deployment readiness, all services are containerized using optimized multi-stage Docker builds.
+
+### A. Docker Optimization
+- **Base Image**: `eclipse-temurin:21-jre-alpine` (Minimal footprint, secure, and multi-arch).
+- **Multi-Stage Build**: Separates the Maven build environment from the runtime environment to keep the final image size under 150MB.
+- **Security**: Services run as a non-root `spring` user inside the container.
+- **Caching**: Local Maven dependencies are cached during the build stage to speed up subsequent builds.
+
+### B. Build Automation (`build_images.sh`)
+The system includes an automated build script in `docs and infra/` that:
+1. Cleans up existing service images.
+2. Uses **Docker Buildx** to build universal images supporting both `amd64` (standard Linux/Windows) and `arm64` (Apple Silicon).
+3. Tags images as `crawler-[service-name]`.
+
+---
+
+## 12. Observability & Configuration
 
 A production-ready system must be visible and configurable via external sources of truth.
 
 ### A. Logging & Tracing
--   **Structured Logging**: All services emit logs in JSON format for ingestion by ELK (Elasticsearch, Logstash, Kibana) or AWS CloudWatch.
--   **Distributed Tracing**: Implementation of **OpenTelemetry** with **Jaeger** or **AWS X-Ray**. Every request carries a Trace ID from Discovery through Kafka to the final DB update.
+All microservices use **Logback** for granular logging. Files are saved in the `logs/` folder of each service root:
+- **`all.log`**: Combined log stream.
+- **`trace.log`**: `TRACE` level details (e.g., individual message IDs).
+- **`debug.log`**: `DEBUG` level for troubleshooting.
+- **`info.log`**: `INFO` level for business flow mapping.
+- **`warn.log`**: `WARN` level for retries and jitter anomalies.
+- **`error.log`**: Strictly `ERROR` level events (failures, exceptions).
 
-### B. Environment & Secret Management
+### B. Caching Layer
+The **Processor Service** implements a caching layer using **Redis** for the Retrieval API:
+- **Endpoint**: `GET /api/v1/processor/records/{processId}`
+- **TTL**: 30 seconds (configurable via `REDIS_CACHE_TTL` in `.env`).
+- **Logic**: Reduces database load for repeated queries on a specific process batch.
+
+### C. Environment & Secret Management
 -   **Dev**: Local environment variables managed via `.env` files.
 -   **Prod**: 
     -   **AWS Secrets Manager**: All sensitive data (DB passwords, Kafka credentials, Parser API keys) are fetched at runtime or injected via K8s secrets synchronized with AWS.

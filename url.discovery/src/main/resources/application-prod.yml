@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  kafka:
+    bootstrap-servers: ${KAFKA_URL}
+server:
+  port: 8080
+discovery:
+  max-count: 100000

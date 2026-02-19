@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+server:
+  port: ${SENSOR_PORT:8085}
+sensor:
+  jitter:
+    min: 100
+    max: 300
+  fail-rate: ${SENSOR_FAIL_RATE:0.25}

@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+server:
+  port: 8081
+discovery:
+  max-count: 100000

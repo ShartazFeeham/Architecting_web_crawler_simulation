@@ -1,4 +1,3 @@
-version: "3.8"
 name: "C.A.D.S.O.K."
 
 x-common-kafka-environment: &common-kafka-environment
@@ -19,54 +18,19 @@ x-common-kafka-environment: &common-kafka-environment
 
 services:
 
-  # 🚀 DATABASE SERVICES 🚀
-
-  # Postgres database for processor-service
-  storage-processor-pg-db:
+  # 🚀 SINGLE DATABASE SERVICE 🚀
+  crawler-pg-db:
     restart: always
     image: postgres:14.15-alpine3.20
-    container_name: processor-pg-db
+    container_name: crawler-pg-db
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: db
+      POSTGRES_DB: crawler_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
-      - processor-pg-db_local_data:/var/lib/postgresql/data
-    # 🚨 CDC CONFIGURATION ADDED 🚨
-    command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
-
-  # Postgres database for discovery-service
-  storage-discovery-pg-db:
-    restart: always
-    image: postgres:14.15-alpine3.20
-    container_name: discovery-pg-db
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_DB: db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - discovery-pg-db_local_data:/var/lib/postgresql/data
-    # 🚨 CDC CONFIGURATION ADDED 🚨
-    command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
-
-  # Postgres database for fetcher-service
-  storage-fetcher-pg-db:
-    restart: always
-    image: postgres:14.15-alpine3.20
-    container_name: fetcher-pg-db
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_DB: db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - fetcher-pg-db_local_data:/var/lib/postgresql/data
-    # 🚨 CDC CONFIGURATION ADDED 🚨
+      - crawler-pg-db_local_data:/var/lib/postgresql/data
     command: postgres -c wal_level=logical -c max_wal_senders=4 -c max_replication_slots=4 -c listen_addresses='*'
 
   # PG Admin for postgres database UI
@@ -83,7 +47,6 @@ services:
       - pgadmin-data:/var/lib/pgadmin
 
   # 🚀 KAFKA ECOSYSTEM SERVICES 🚀
-
   zookeeper:
     restart: always
     image: confluentinc/cp-zookeeper:7.8.0
@@ -147,7 +110,7 @@ services:
     hostname: schema-registry
     container_name: schema-registry
     ports:
-      - "8081:8081"
+      - "8087:8081"
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:19092,PLAINTEXT://kafka3:19092
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
@@ -158,22 +121,19 @@ services:
       - kafka2
       - kafka3
 
-  # 🚀 DEBEZIUM CONNECT SERVICE ADDED FOR OUTBOX PATTERN 🚀
   debezium-connect:
     restart: always
     image: debezium/connect:2.7.3.Final
     hostname: debezium-connect
     container_name: debezium-connect
     ports:
-      - "8083:8083" # Kafka Connect REST API port
+      - "8089:8083"
     environment:
-      # Use INTERNAL listener of kafka1
       BOOTSTRAP_SERVERS: kafka1:19092
       GROUP_ID: 1
       CONFIG_STORAGE_TOPIC: my_connect_configs
       OFFSET_STORAGE_TOPIC: my_connect_offsets
       STATUS_STORAGE_TOPIC: my_connect_statuses
-      # Make sure Connect can reach Zookeeper
       ZOOKEEPER_CONNECT: zookeeper:2181
     depends_on:
       - kafka1
@@ -190,15 +150,25 @@ services:
     ports:
       - "9000:9000"
     environment:
-      KAFKA_BROKERCONNECT: kafka1:19092,kafka2:19092,kafka3:19092 # Use internal broker ports
+      KAFKA_BROKERCONNECT: kafka1:19092,kafka2:19092,kafka3:19092
       JVM_OPTS: "-Xms32M -Xmx64M"
     depends_on:
       - kafka1
       - kafka2
       - kafka3
 
+  # 🚀 REDIS FOR CACHING 🚀
+  redis:
+    restart: always
+    image: redis:7.4.2-alpine
+    container_name: crawler-cache-redis
+    ports:
+      - "6379:6379"
+
+networks:
+  default:
+    name: cadsok_default
+
 volumes:
-  processor-pg-db_local_data:
-  discovery-pg-db_local_data:
-  fetcher-pg-db_local_data:
+  crawler-pg-db_local_data:
   pgadmin-data:

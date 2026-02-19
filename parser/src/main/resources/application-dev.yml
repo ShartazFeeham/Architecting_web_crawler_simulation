@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+server:
+  port: ${PARSER_PORT:8084}
+parser:
+  jitter:
+    min: 100
+    max: 1000
+  fail-rate: ${PARSER_FAIL_RATE:0.25}
