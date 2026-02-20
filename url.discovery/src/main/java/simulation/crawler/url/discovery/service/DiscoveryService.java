@@ -31,6 +31,7 @@ public class DiscoveryService {
 
         long processId = Math.abs(random.nextLong());
         log.info("Starting crawl process: {} for {} URLs", processId, count);
+        var startTime = System.currentTimeMillis();
 
         // Emit events to Kafka directly
         for (int i = 0; i < count; i++) {
@@ -44,7 +45,9 @@ public class DiscoveryService {
             log.trace("Published discovery event for URL: {}", url);
         }
 
-        log.info("Successfully published {} discovery events for process ID: {}", count, processId);
+        log.info("Successfully published {} discovery events for process ID: {}, time taken: {}ms",
+                count, processId, System.currentTimeMillis() - startTime);
+
         return processId;
     }
 }

@@ -99,7 +99,7 @@
         </encoder>
     </appender>
 
-    <root level="TRACE">
+    <root level="INFO">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="ALL_LOGS" />
         <appender-ref ref="TRACE_LOGS" />
