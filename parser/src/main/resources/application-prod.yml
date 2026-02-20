@@ -1,0 +1,9 @@
+# Production specific configuration (K8s)
+server:
+  port: 8080 # For Inside the K8s
+
+parser:
+  jitter:
+    min: ${PARSER_JITTER_MIN:100}
+    max: ${PARSER_JITTER_MAX:1000}
+  fail-rate: ${PARSER_FAIL_RATE:0.25}

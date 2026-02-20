@@ -1,10 +1,15 @@
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
 spring:
-  config:
-    activate:
-      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5433/db
+    username: user
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
 server:
-  port: 8081
-discovery:
-  max-count: 100000
+  port: 8081 # Override to 8081 in Dev only

@@ -1,27 +1,8 @@
 spring:
+  application:
+    name: parser
   profiles:
     active: dev
----
-spring:
-  config:
-    activate:
-      on-profile: dev
+
 server:
-  port: 8084
-parser:
-  jitter:
-    min: 100
-    max: 1000
-  fail-rate: 0.25
----
-spring:
-  config:
-    activate:
-      on-profile: prod
-server:
-  port: 8080
-parser:
-  jitter:
-    min: ${PARSER_JITTER_MIN:100}
-    max: ${PARSER_JITTER_MAX:1000}
-  fail-rate: ${PARSER_FAIL_RATE:0.25}
+  port: 8080 # For Inside the K8s

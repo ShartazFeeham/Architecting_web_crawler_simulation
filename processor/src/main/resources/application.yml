@@ -3,41 +3,6 @@ spring:
     name: processor
   profiles:
     active: dev
----
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    url: jdbc:postgresql://localhost:5432/crawler_db
-    username: user
-    password: password
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: processor-group
-      auto-offset-reset: earliest
+
 server:
-  port: 8083
----
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: none
-  kafka:
-    bootstrap-servers: ${KAFKA_URL}
-    consumer:
-      group-id: processor-group
-server:
-  port: 8080
+  port: 8080 # For Inside the K8s

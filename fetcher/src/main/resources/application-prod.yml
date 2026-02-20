@@ -1,14 +1,15 @@
 # Production specific configuration (K8s)
 spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: update
   kafka:
     bootstrap-servers: ${KAFKA_URL}
+    consumer:
+      group-id: fetcher-group
 
 server:
   port: 8080 # For Inside the K8s
+
+parser:
+  url: ${PARSER_URL}
+
+sensor:
+  url: ${SENSOR_URL}

@@ -1,11 +1,9 @@
-spring:
-  config:
-    activate:
-      on-profile: dev
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
 server:
-  port: ${SENSOR_PORT:8085}
+  port: 8085
+
 sensor:
   jitter:
     min: 100
     max: 300
-  fail-rate: ${SENSOR_FAIL_RATE:0.25}
+  fail-rate: 0.25

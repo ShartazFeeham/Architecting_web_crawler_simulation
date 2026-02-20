@@ -1,26 +1,18 @@
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
 spring:
-  config:
-    activate:
-      on-profile: dev
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:crawler_db}
-    username: ${DB_USER:user}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:postgresql://localhost:5432/crawler_db
+    username: user
+    password: password
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: localhost:9092
     consumer:
       group-id: processor-group
       auto-offset-reset: earliest
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-  cache:
-    redis:
-      time-to-live: ${REDIS_CACHE_TTL:30}s
+
 server:
-  port: ${PROCESSOR_PORT:8083}
+  port: 8083 # Override in Dev only

@@ -1,11 +1,9 @@
-spring:
-  config:
-    activate:
-      on-profile: dev
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
 server:
-  port: ${PARSER_PORT:8084}
+  port: 8084
+
 parser:
   jitter:
     min: 100
     max: 1000
-  fail-rate: ${PARSER_FAIL_RATE:0.25}
+  fail-rate: 0.25

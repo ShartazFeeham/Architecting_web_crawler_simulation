@@ -1,15 +1,16 @@
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
 spring:
-  config:
-    activate:
-      on-profile: dev
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: fetcher-group
       auto-offset-reset: earliest
+
 server:
-  port: ${FETCHER_PORT:8082}
+  port: 8082
+
 parser:
   url: ${PARSER_URL:http://localhost:8084/api/v1/parser/process}
+
 sensor:
   url: ${SENSOR_URL:http://localhost:8085/api/v1/sensor/inspect}
