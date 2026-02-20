@@ -1,0 +1,10 @@
+# Production specific configuration (K8s)
+server:
+  port: 8080 # For Inside the K8s
+
+sensor:
+  jitter:
+    min: ${SENSOR_JITTER_MIN:100}
+    max: ${SENSOR_JITTER_MAX:300}
+  fail-rate: ${SENSOR_FAIL_RATE:0.25}
+  censorship-rate: ${SENSOR_CENSORSHIP_RATE:0.25}

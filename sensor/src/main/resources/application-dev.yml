@@ -1,0 +1,9 @@
+server:
+  port: 8085
+
+sensor:
+  jitter:
+    min: 100
+    max: 300
+  fail-rate: 0.25
+  censorship-rate: 0.25

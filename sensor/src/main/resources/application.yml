@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: sensor
+  profiles:
+    active: dev
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080 # For Inside the K8s
