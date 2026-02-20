@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  kafka:
+    bootstrap-servers: ${KAFKA_URL}
+
+server:
+  port: 8080 # For Inside the K8s
+
+kafka:
+  topic:
+    discovery-urls: ${KAFKA_TOPIC_DISCOVERY_URLS}
