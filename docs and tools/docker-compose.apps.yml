@@ -1,0 +1,70 @@
+name: "Crawler local apps"
+
+services:
+  # 🤖 CRAWLER MICROSERVICES 🤖
+  url-discovery:
+    image: ${DOCKER_USERNAME:-feeham}/crawler-url-discovery:1.0
+    container_name: crawler-url-discovery
+    ports:
+      - "${DISCOVERY_PORT:-8081}:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://crawler-pg-db:5432/crawler_db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092,kafka2:19093,kafka3:19094
+    networks:
+      - cadsok_default
+
+  processor:
+    image: ${DOCKER_USERNAME:-feeham}/crawler-processor:1.0
+    container_name: crawler-processor
+    ports:
+      - "${PROCESSOR_PORT:-8083}:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://crawler-pg-db:5432/crawler_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092,kafka2:19093,kafka3:19094
+      - SPRING_DATA_REDIS_HOST=crawler-cache-redis
+      - SPRING_DATA_REDIS_PORT=6379
+    networks:
+      - cadsok_default
+
+  fetcher:
+    image: ${DOCKER_USERNAME:-feeham}/crawler-fetcher:1.0
+    container_name: crawler-fetcher
+    ports:
+      - "${FETCHER_PORT:-8082}:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092,kafka2:19093,kafka3:19094
+      - PARSER_URL=http://crawler-parser:8084/api/v1/parser/process
+      - SENSOR_URL=http://crawler-sensor:8085/api/v1/sensor/inspect
+    networks:
+      - cadsok_default
+
+  parser:
+    image: ${DOCKER_USERNAME:-feeham}/crawler-parser:1.0
+    container_name: crawler-parser
+    ports:
+      - "${PARSER_PORT:-8084}:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - PARSER_FAIL_RATE=${PARSER_FAIL_RATE}
+    networks:
+      - cadsok_default
+
+  sensor:
+    image: ${DOCKER_USERNAME:-feeham}/crawler-sensor:1.0
+    container_name: crawler-sensor
+    ports:
+      - "${SENSOR_PORT:-8085}:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SENSOR_FAIL_RATE=${SENSOR_FAIL_RATE}
+    networks:
+      - cadsok_default
+
+networks:
+  cadsok_default:
+    external: true
