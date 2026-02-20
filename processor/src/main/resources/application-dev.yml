@@ -1,0 +1,23 @@
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/crawler_db
+    username: user
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: processor-group
+      auto-offset-reset: earliest
+
+server:
+  port: 8083 # Override in Dev only
+
+kafka:
+  topic:
+    discovery-urls: crawler.discovery.urls
+    fetcher-results: crawler.fetcher.results
