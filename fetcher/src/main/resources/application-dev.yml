@@ -1,0 +1,25 @@
+# Development specific configuration (runs locally, e.g. Docker Compose or IDE)
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: fetcher-group
+      auto-offset-reset: earliest
+      max-poll-records: 100
+    listener:
+      type: batch
+      concurrency: 5
+
+server:
+  port: 8082
+
+parser:
+  url: ${PARSER_URL:http://localhost:8084/api/v1/parser/process}
+
+sensor:
+  url: ${SENSOR_URL:http://localhost:8085/api/v1/sensor/inspect}
+
+kafka:
+  topic:
+    public-crawl-records: crawler.public.crawl_records
+    fetcher-results: crawler.fetcher.results

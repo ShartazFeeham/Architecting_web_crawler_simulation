@@ -1,0 +1,20 @@
+# Production specific configuration (K8s)
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_URL}
+    consumer:
+      group-id: fetcher-group
+
+server:
+  port: 8080 # For Inside the K8s
+
+parser:
+  url: ${PARSER_URL}
+
+sensor:
+  url: ${SENSOR_URL}
+
+kafka:
+  topic:
+    public-crawl-records: ${KAFKA_TOPIC_PUBLIC_CRAWL_RECORDS}
+    fetcher-results: ${KAFKA_TOPIC_FETCHER_RESULTS}
