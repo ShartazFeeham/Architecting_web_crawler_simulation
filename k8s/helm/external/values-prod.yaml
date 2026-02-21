@@ -1,0 +1,51 @@
+# values-prod.yaml - Configuration for the PRODUCTION environment
+# Use this for high-availability and performance
+
+replicaCount: 3
+springProfile: prod
+
+parserSettings:
+  jitterMin: 50
+  jitterMax: 500
+  failRate: 0.1
+
+image:
+  repository: feeham/crawler-parser
+  tag: "latest" # Changed from 1.2.4 to latest to match your pushed image
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  host: parser.external.public.url # The main public-facing local domain
+
+resources:
+  requests:
+    cpu: 100m      # Reserve less CPU
+    memory: 128Mi
+  limits:
+    cpu: 300m      # Cap lower to prevent Mac lag
+    memory: 512Mi
+
+probes:
+  liveness:
+    enabled: false
+    path: /health
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readiness:
+    enabled: false
+    path: /ready
+    port: 8080
+    initialDelaySeconds: 2
+    periodSeconds: 5
+
+autoscaling:
+  enabled: true    # Enabled in Prod to handle crawl spikes
+  minReplicas: 2   # Never drop below 2 pods for safety
+  maxReplicas: 10  # Can scale up to 10
+  targetCPUUtilizationPercentage: 40 # Scale when pods are moderately busy

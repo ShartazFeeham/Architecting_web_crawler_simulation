@@ -1,0 +1,49 @@
+apiVersion: apps/v1  # Specifying the API version for Deployment objects
+kind: Deployment     # Defining this resource as a Deployment for pod management
+metadata:            # Data that helps uniquely identify the object
+  name: parser-external # The unique name of this deployment in the namespace
+spec:                # Specifications of the desired state for the deployment
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }} # Use the fixed replica count from values.yaml
+  {{- end }}
+  selector:          # Defining how the deployment finds which pods to manage
+    matchLabels:     # Identifying pods based on these specific labels
+      app: parser-external # Label must match the pod template label below
+  template:          # The blueprint for the pods to be created
+    metadata:        # Metadata for the pods created by this deployment
+      labels:        # Labels to be applied to the newly created pods
+        app: parser-external # The label used for service and selector matching
+    spec:            # Operational specifications for the pod's containers
+      containers:    # List of containers to run inside the pod
+        - name: parser # Name of the individual container
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # The Docker image to pull and run
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.springProfile }}
+            - name: PARSER_JITTER_MIN
+              value: {{ .Values.parserSettings.jitterMin | quote }}
+            - name: PARSER_JITTER_MAX
+              value: {{ .Values.parserSettings.jitterMax | quote }}
+            - name: PARSER_FAIL_RATE
+              value: {{ .Values.parserSettings.failRate | quote }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: {{ .Values.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: {{ .Values.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          {{- end }}

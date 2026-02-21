@@ -1,0 +1,48 @@
+replicaCount: 1
+springProfile: dev
+
+parserSettings:
+  jitterMin: 100
+  jitterMax: 1000
+  failRate: 0.25
+
+image:             # Container image configuration
+  repository: feeham/crawler-parser # Docker Hub repository path
+  tag: latest # Match the recently pushed image tag
+  pullPolicy: IfNotPresent # Pull image only if it doesn't already exist locally
+
+service:           # Internal networking configuration
+  type: ClusterIP  # Accessible only within the cluster
+  port: 8084       # Port exposed by the service internally
+
+ingress:           # External DNS/Routing configuration
+  enabled: true    # Toggle for generating the ingress resource
+  host: parser.external.public.url # Local domain name for browser access
+
+resources:         # Resource requests and limits (Required for Autoscaling)
+  requests:        # Minimum guaranteed resources for each pod
+    cpu: 100m      # Reserve 0.1 CPU core
+    memory: 128Mi  # Reserve 128 Megabytes of RAM
+  limits:          # Absolute maximum resources allowed for each pod
+    cpu: 500m      # Cap at 0.5 CPU core
+    memory: 512Mi  # Cap at 512 Megabytes of RAM
+
+probes:            # Health check configurations
+  liveness:
+    enabled: false
+    path: /health
+    port: 8084     # The port to hit
+    initialDelaySeconds: 5 # Wait 5 seconds after start before checking
+    periodSeconds: 10      # Check every 10 seconds
+  readiness:
+    enabled: false
+    path: /ready
+    port: 8084     # The port to hit
+    initialDelaySeconds: 2 # Wait 2 seconds after start before checking
+    periodSeconds: 5       # Check every 5 seconds
+
+autoscaling:       # Horizontal Pod Autoscaler configuration
+  enabled: true    # Enable or disable the auto-scaling resource
+  minReplicas: 1   # Minimum number of pods to maintain
+  maxReplicas: 10  # Maximum number of pods to scale up to
+  targetCPUUtilizationPercentage: 80 # The goal to maintain (Scales up if usage exceeds ~88% due to 10% tolerance)

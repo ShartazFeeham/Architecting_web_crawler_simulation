@@ -1,0 +1,21 @@
+{{/* Logic for the Horizontal Pod Autoscaler (HPA) */}}
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2 # Version of the API for autoscaling resources
+kind: HorizontalPodAutoscaler # Resource type: Automatically scales pod count
+metadata:          # Identification data for the HPA object
+  name: parser-external-hpa # Unique name for this autoscaler resource
+spec:              # Specifications for your scaling behavior
+  scaleTargetRef:  # Reference to the resource we want to scale
+    apiVersion: apps/v1 # API version of the target resource
+    kind: Deployment # Type of the target resource
+    name: parser-external # The name of the deployment to be scaled
+  minReplicas: {{ .Values.autoscaling.minReplicas }} # The absolute minimum number of pods
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }} # The absolute maximum number of pods
+  metrics:         # The rules/triggers that define when to scale
+    - type: Resource # Scaling based on a hardware resource (CPU/Memory)
+      resource:    # Specification of which resource to watch
+        name: cpu  # Monitoring Central Processing Unit usage
+        target:    # The goal to maintain
+          type: Utilization # Measure by percentage of the requested amount
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }} # The goal target (scaling triggers when exceeding target + tolerance)
+{{- end }}         # Closing the Helm conditional block

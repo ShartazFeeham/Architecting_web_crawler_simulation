@@ -1,0 +1,48 @@
+# values-test.yaml - Configuration for the TEST environment
+# Use this for local testing or CI/CD pipelines
+
+replicaCount: 1
+springProfile: prod
+
+parserSettings:
+  jitterMin: 100
+  jitterMax: 1000
+  failRate: 0.25
+
+image:
+  repository: feeham/crawler-parser
+  tag: latest # Usually we use "latest" or a specific "dev" tag in test
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  host: parser.external.public.url # Unique hostname so it doesn't clash with Prod
+
+resources:
+  requests:
+    cpu: 50m       # Very low resource request for testing
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+probes:
+  liveness:
+    enabled: false
+    path: /health
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 20
+  readiness:
+    enabled: false
+    path: /ready
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+autoscaling:
+  enabled: false # Typically disabled in test to keep behavior predictable

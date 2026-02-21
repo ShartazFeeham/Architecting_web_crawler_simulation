@@ -1,0 +1,6 @@
+apiVersion: v2 # Helm chart API version (v2 is for Helm 3)
+name: parser-external # The name of the chart
+description: External Parser Service # A brief description of the chart
+type: application # The type of chart: application (standard) or library
+version: 0.1.0 # The version of the chart itself (changes when you change YAMLs)
+appVersion: "1.0.0" # The version of the actual software/docker image

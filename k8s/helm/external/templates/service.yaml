@@ -1,0 +1,12 @@
+apiVersion: v1     # Specifying the version of the core Kubernetes API
+kind: Service      # Defining this resource as a Service for network access
+metadata:          # Data that helps uniquely identify the object
+  name: parser-external # The unique name of this service to be used by other apps
+spec:              # Specifications for how the service should behave
+  type: {{ .Values.service.type }} # Service type: ClusterIP (internal) or NodePort (external)
+  ports:           # List of configuration for ports exposed by this service
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+      protocol: TCP
+  selector:        # Defining which pods this service will route traffic to
+    app: parser-external # Traffic is sent to any Pod with this specific label

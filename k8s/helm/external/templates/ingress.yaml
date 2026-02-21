@@ -1,0 +1,21 @@
+{{/* Only generate this file if ingress is enabled in values.yaml */}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1 # Version of the API for Ingress resources
+kind: Ingress     # Defining this resource as an Ingress for HTTP/DNS routing
+metadata:         # Data that helps uniquely identify the Ingress object
+  name: parser-external # Unique name of this Ingress resource
+  annotations:    # Extra configuration markers for the Ingress Controller
+    kubernetes.io/ingress.class: nginx # Instructing the Nginx controller to handle this traffic
+spec:             # Specifications for routing rules
+  rules:          # A list of hostnames and their associated path rules
+    - host: {{ .Values.ingress.host }} # The domain name assigned to this service (e.g. parser.local)
+      http:       # Defining HTTP-specific routing rules
+        paths:    # A list of URL paths to map to internal services
+          - path: /        # The URL root path for this hostname
+            pathType: Prefix # Matches any path starting with the specified string
+            backend:      # The internal destination for the traffic
+              service:    # Directing traffic to a specific Kubernetes Service
+                name: parser-external # The name of the Service to forward traffic to
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

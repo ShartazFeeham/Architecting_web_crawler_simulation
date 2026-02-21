@@ -24,10 +24,20 @@ public class ParserService {
     public ParserResponse parse(String url) throws Exception {
         log.info("Received parsing request for URL: {}", url);
 
-        // Simulation: Jitter
+        // Simulation: Jitter (Balanced Load)
         int jitter = minJitter + random.nextInt(maxJitter - minJitter);
-        log.info("Simulating parsing delay: {}ms for URL: {}", jitter, url);
-        Thread.sleep(jitter);
+        log.info("Simulating parsing work: {}ms for URL: {}", jitter, url);
+        long endTime = System.currentTimeMillis() + jitter;
+        while (System.currentTimeMillis() < endTime) {
+            // Do some math for 50ms then sleep for 50ms to allow context switching
+            long phaseEnd = System.currentTimeMillis() + 50;
+            while (System.currentTimeMillis() < phaseEnd && System.currentTimeMillis() < endTime) {
+                Math.sqrt(random.nextDouble());
+            }
+            if (System.currentTimeMillis() < endTime) {
+                Thread.sleep(10);
+            }
+        }
 
         // Simulation: Failure Rate
         if (random.nextDouble() < failRate) {
