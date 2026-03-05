@@ -1,9 +1,15 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: crawler-system
+  name: crawler-infrastructure
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crawler-apps
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: crawler-external
+

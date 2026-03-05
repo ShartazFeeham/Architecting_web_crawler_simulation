@@ -41,7 +41,7 @@ public class DiscoveryService {
             String domain = DOMAINS[random.nextInt(DOMAINS.length)];
             String category = CATEGORIES[random.nextInt(CATEGORIES.length)];
             String url = String.format("https://%s/products/%s/item-%06d", domain, category,
-                    Math.abs(random.nextInt(1000000)));
+                    Math.abs(random.nextInt(1000000000)));
 
             String event = String.format("{\"url\":\"%s\", \"processId\":%d}", url, processId);
             kafkaTemplate.send(discoveryUrlsTopic, event);

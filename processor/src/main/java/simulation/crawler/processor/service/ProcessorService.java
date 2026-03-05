@@ -69,6 +69,7 @@ public class ProcessorService {
 
                 record.setCensored(result.getCensored());
                 repository.save(record);
+                process(record);
                 log.info("Successfully updated record for URL: {} with status: {}", result.getUrl(),
                         record.getStatus());
             }, () -> {
@@ -77,5 +78,10 @@ public class ProcessorService {
         } catch (Exception e) {
             log.error("Error processing fetcher result: {}", e.getMessage(), e);
         }
+    }
+
+    private void process(CrawlRecord record) {
+        // Dummy process
+        log.info("Processing Site | Url: {} | Content: {}", record.getUrl(), record);
     }
 }

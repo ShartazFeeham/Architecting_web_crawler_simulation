@@ -1,12 +1,4 @@
 spring:
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/crawler_db}
-    username: user
-    password: password
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
