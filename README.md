@@ -1,4 +1,51 @@
 # 🕸️ Architecting web crawler simulation
+
+```mermaid
+graph TD
+    subgraph Monitoring
+        Kafkadrop[Kafkadrop UI]
+    end
+
+    subgraph "External Ecosystem"
+        Parser[Parser Service]
+    end
+
+    subgraph "Crawler Cluster (Kubernetes)"
+        Discovery[Url Discovery]
+        Processor[Processor Service]
+        Fetcher[Fetcher Service]
+        Sensor[Sensor Service]
+        
+        DB[(PostgreSQL)]
+        Debezium[Debezium CDC]
+        
+        Kafka{Kafka Event Bus}
+    end
+
+    %% Flow
+    User((User)) -->|Trigger| Discovery
+    Discovery -->|Publish| Kafka
+    Kafka -->|Consume| Processor
+    Processor -->|Persist PENDING| DB
+    DB -->|CDC Stream| Debezium
+    Debezium -->|Publish| Kafka
+    Kafka -->|Crawl Job| Fetcher
+    
+    Fetcher -->|Inspect| Sensor
+    Fetcher -->|Parse via Ingress| Parser
+    
+    Fetcher -->|Combined Result| Kafka
+    Kafka -->|Final Sync| Processor
+    Processor -->|Update DB| DB
+    
+    %% Monitoring Links
+    Kafkadrop -.->|Monitor| Kafka
+
+    style Kafka fill:#f96,stroke:#333,stroke-width:2px
+    style DB fill:#3498db,color:#fff,stroke:#333
+    style Parser fill:#e74c3c,color:#fff,stroke:#333
+```
+
 This project is made for business-simple, architecture + deployment focused learning. 
 The concept is simple: Its a Crawler simulator, the `Url discovery` service discovers multiple url and publish them to `Kafka`.
 Then the `Processor` service consumes them, saves to `Database` as pending. Outbox (`Debezium`) reads those and publish to Kafka. 
