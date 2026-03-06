@@ -1,0 +1,39 @@
+
+# 1. The Headless Service (Required for StatefulSets)
+# This does NOT load balance. It returns the exact IPs of the individual broker pods
+# so they can talk to each other and maintain their "sticky" identities.
+apiVersion: v1
+kind: Service
+metadata:
+  name: crawler-kafka-headless
+  labels:
+    app: crawler-kafka
+spec:
+  ports:
+  - port: {{ .Values.kafka.ports.client }}
+    name: external
+  - port: {{ .Values.kafka.ports.internal }}
+    name: internal
+  # clusterIP: None is what makes this "Headless"
+  clusterIP: None
+  selector:
+    app: crawler-kafka
+---
+# 2. The Standard Service
+# This is what Kafkadrop and your Spring Boot apps use as the "Bootstrap Server".
+# It provides a single stable IP that forwards to *any* healthy broker.
+apiVersion: v1
+kind: Service
+metadata:
+  name: crawler-kafka
+  labels:
+    app: crawler-kafka
+spec:
+  ports:
+  - port: {{ .Values.kafka.ports.client }}
+    targetPort: {{ .Values.kafka.ports.client }}
+    name: external
+  selector:
+    app: crawler-kafka
+  type: ClusterIP
+

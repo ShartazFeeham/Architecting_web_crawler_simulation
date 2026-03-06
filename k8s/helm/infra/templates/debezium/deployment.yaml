@@ -1,0 +1,71 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawler-debezium
+  labels:
+    app: crawler-debezium
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-debezium
+  template:
+    metadata:
+      labels:
+        app: crawler-debezium
+    spec:
+      containers:
+      - name: debezium
+        image: "{{ .Values.debezium.image.repository }}:{{ .Values.debezium.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.debezium.port }}
+          name: api
+        env:
+        # Kafka Connect relies on Kafka to store its offsets/configs instead of a local hard drive
+        - name: BOOTSTRAP_SERVERS
+          value: "crawler-kafka:9092"
+        - name: GROUP_ID
+          value: "1"
+        - name: CONFIG_STORAGE_TOPIC
+          value: "my_connect_configs"
+        - name: OFFSET_STORAGE_TOPIC
+          value: "my_connect_offsets"
+        - name: STATUS_STORAGE_TOPIC
+          value: "my_connect_statuses"
+        # We explicitly lower the JVM heap footprint so it plays nicely within Kubernetes bounds
+        - name: KAFKA_HEAP_OPTS
+          value: "{{ .Values.debezium.heapOpts }}"
+        resources:
+          {{- toYaml .Values.debezium.resources | nindent 10 }}
+        # The readiness probe ensures that Kubernetes won't route API traffic here until it has connected to Kafka
+        readinessProbe:
+          httpGet:
+            path: /connectors
+            port: {{ .Values.debezium.port }}
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+      # We use a dedicated sidecar container to configure Debezium. 
+      # It waits in a loop until the main container's REST API is awake and responding, then posts the JSON.
+      - name: configurator
+        image: curlimages/curl
+        command:
+          - "sh"
+          - "-c"
+          - |
+            echo "Waiting for Debezium Kafka Connect API to start..."
+            while [ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/connectors)" != "200" ]; do
+              sleep 2
+            done
+            echo "API is fully up! Injecting Postgres Connector configuration..."
+            curl -X POST -H 'Accept:application/json' -H 'Content-Type:application/json' http://localhost:8083/connectors/ -d @/debezium/config/pg-connector.json
+            echo "Configuration injected. Configurator sidecar going to sleep..."
+            sleep infinity
+        volumeMounts:
+        - name: config-volume
+          mountPath: /debezium/config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: crawler-debezium-config
+

@@ -91,7 +91,7 @@ All utility scripts and configurations are located in the `docs-and-tools` direc
 ## 🚢 Deployment (External)
 Focuses on the high-availability distribution of the Parser service. This deployment serves as a blueprint for external service integration, featuring dynamic scaling, environment-aware configuration, and ingress-based networking.
 
-### 📂 Folder: `k8s/helm/external-parser`
+### 📂 Folder: `k8s/helm/external`
 The heart of the external service distribution, structured for multi-environment reliability.
 
 - **`Chart.yaml`**: Contains the chart metadata, defining the **application version** and **helm chart naming** for registry indexing.
@@ -117,7 +117,7 @@ Create the required namespaces for the crawler ecosystem:
 
 Install or upgrade the external parser chart with production values:
 ```bash
-  helm upgrade --install parser-external ./k8s/helm/external-parser -f ./k8s/helm/external-parser/values-prod.yaml -n crawler-external
+  helm upgrade --install parser-external ./k8s/helm/external -f ./k8s/helm/external/values-prod.yaml -n crawler-external
 ```
 
 Monitor the status of pods and their distribution:
@@ -146,7 +146,51 @@ Completely remove the external parser deployment:
 ```
 
 ## 🚢 Deployment (Crawler)
-*(To be implemented)*
+The internal workloads, covering stateful infrastructure (Kafka, Postgres) and stateless web services.
+
+### 🏗️ Infrastructure (`crawler-infra`)
+This chart handles the deployment of Postgres, Zookeeper, Kafka, Kafkadrop, and Debezium. It uses explicit manifests (no conditionals) to guarantee all components spin up synchronously. It includes a specialized `configurator` sidecar container that actively polls the Debezium REST API and injects the Postgres CDC configuration once the server is ready.
+
+#### 💻 Commands (Infrastructure)
+
+**1. Local Development (Default Values)**
+Tuned for a local Mac environment with 16GB of RAM. Provides enough JVM heap to run smoothly without overheating.
+```bash
+  helm upgrade --install infra-test ./k8s/helm/infra -n crawler-infrastructure
+```
+
+**2. AWS Free Tier (Aggressive Constraints)**
+Extremely aggressive constraints intended to squeeze the entire stack onto a 1GB AWS `t2.micro` instance. Sets Kafka to 1 replica and crushes JVM heaps to `128M`. *(Note: High probability of OOM Kills).*
+```bash
+  helm upgrade --install infra-test ./k8s/helm/infra -f ./k8s/helm/infra/values-aws-free-tier.yaml -n crawler-infrastructure
+```
+
+**3. Enterprise Production (HA Cluster)**
+True enterprise-grade HA cluster. Provisions 5 Kafka brokers, massive 1TB persistent storage volumes, and 16GB RAM constraints per pod.
+```bash
+  helm upgrade --install infra-test ./k8s/helm/infra -f ./k8s/helm/infra/values-prod.yaml -n crawler-infrastructure
+```
+
+Verify that the Infrastructure pods are running:
+```bash
+  kubectl get pods -n crawler-infrastructure -w
+```
+
+Connect to the Postgres database directly from within the pod:
+```bash
+  kubectl exec -it crawler-pg-db-0 -n crawler-infrastructure -- psql -U user -d crawler_db
+```
+*(When prompted for a password, enter: `password`)*
+
+Access the **Kafkadrop UI** by adding the Ingress host to your local machine's `/etc/hosts` file:
+```bash
+  sudo nano /etc/hosts
+```
+Add this line at the bottom:
+```text
+  127.0.0.1 kafka.crawler.public.url
+```
+Then open your browser to: `http://kafka.crawler.public.url`
 
 
 

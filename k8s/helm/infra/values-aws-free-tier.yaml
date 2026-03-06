@@ -1,0 +1,54 @@
+# values-aws-free-tier.yaml - AWS Free Tier Overrides
+# This configuration is EXTREMELY aggressive to fit EVERYTHING onto a single t2.micro / t3.micro EC2 instance (1 GiB RAM total).
+# Note: Running this many Java applications concurrently on 1GB of total system RAM is highly unstable and will likely face OOM kills.
+# But this proves it takes only minimal resources to get the basic scaffolding running.
+
+postgres:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+zookeeper:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+kafka:
+  # CRITICAL: We can only afford ONE Kafka broker on the Free Tier, so we override the replica count 
+  # to preserve precious MBs of RAM.
+  replicas: 1
+  heapOpts: "-Xms64M -Xmx128M"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+kafkadrop:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+debezium:
+  heapOpts: "-Xms64M -Xmx128M"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi

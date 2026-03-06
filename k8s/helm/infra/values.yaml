@@ -1,0 +1,103 @@
+# Base Configuration (Default) for Crawler Infrastructure
+# This file provides defaults tailored for a Local Mac development environment with 16GB of RAM.
+# It balances performance with reasonable resource limits so your Mac doesn't overheat, but things still run fast.
+
+postgres:
+
+  image:
+    repository: postgres
+    tag: 14.15-alpine3.20 # Using a stable, lightweight Alpine image
+  database: crawler_db
+  username: user
+  password: password # Weak default, must be overridden in prod
+  port: 5432
+  
+  # Local dev resource requests are kept very low
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+      
+  # 2GB is plenty for local testing of the crawler
+  storage:
+    size: 2Gi
+    
+  # CRITICAL: Logical replication settings required for Debezium CDC Outbox Pattern
+  config:
+    wal_level: logical
+    max_wal_senders: 4
+    max_replication_slots: 4
+
+zookeeper:
+
+  image:
+    repository: confluentinc/cp-zookeeper
+    tag: 7.8.0
+  port: 2181
+  resources:
+    # Extremely low requests for local dev
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+kafka:
+
+  image:
+    repository: confluentinc/cp-kafka
+    tag: 7.8.0
+  # 3 Brokers to practice distributed clustering!
+  replicas: 3
+  heapOpts: "-Xms128M -Xmx512M"
+  ports:
+    client: 9092
+    internal: 19092
+  resources:
+    # Low requests to fit 3 brokers on a Mac Mini
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  storage:
+    # 1GB per broker is plenty for learning/local testing
+    size: 1Gi
+
+kafkadrop:
+
+  image:
+    repository: obsidiandynamics/kafdrop
+    tag: latest
+  port: 9000
+  ingress:
+
+    host: kafka.crawler.public.url
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 150m
+      memory: 256Mi
+
+debezium:
+
+  image:
+    repository: debezium/connect
+    tag: 2.5 # Using version 2.5 of Debezium Connect
+  port: 8083
+  heapOpts: "-Xms128M -Xmx512M"
+  # Local dev resource requests
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

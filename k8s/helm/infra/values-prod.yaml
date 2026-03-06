@@ -1,0 +1,59 @@
+# values-prod.yaml - Production Overrides for Crawler Infrastructure
+# WARNING: This configuration demands a very serious multi-node Kubernetes cluster.
+# This represents a true enterprise-grade production environment with High Availability (HA),
+# large compute allocations, and massive persistent storage. DO NOT RUN THIS LOCALLY.
+
+postgres:
+  password: "super_secure_production_password_123!"
+  resources:
+    requests:
+      cpu: 2000m # 2 Dedicated Cores
+      memory: 8Gi # 8 GB RAM
+    limits:
+      cpu: 4000m # Up to 4 Cores
+      memory: 16Gi
+  storage:
+    size: 500Gi # Terabyte-scale persistent volume claims
+
+zookeeper:
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+kafka:
+  # 5 brokers to handle massive data partitioning and multi-AZ fault tolerance
+  replicas: 5 
+  heapOpts: "-Xms1G -Xmx4G"
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 8Gi
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+  storage:
+    # 1 TB of retention disk per broker
+    size: 1000Gi
+
+kafkadrop:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+debezium:
+  heapOpts: "-Xms1G -Xmx4G"
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi

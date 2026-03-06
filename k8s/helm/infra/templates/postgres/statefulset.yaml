@@ -1,0 +1,53 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: crawler-pg-db
+  labels:
+    app: crawler-pg-db
+spec:
+  serviceName: "crawler-pg-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-pg-db
+  template:
+    metadata:
+      labels:
+        app: crawler-pg-db
+    spec:
+      containers:
+      - name: postgres
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        args:
+        - "postgres"
+        - "-c"
+        - "wal_level={{ .Values.postgres.config.wal_level }}"
+        - "-c"
+        - "max_wal_senders={{ .Values.postgres.config.max_wal_senders }}"
+        - "-c"
+        - "max_replication_slots={{ .Values.postgres.config.max_replication_slots }}"
+        env:
+        - name: POSTGRES_DB
+          value: {{ .Values.postgres.database }}
+        - name: POSTGRES_USER
+          value: {{ .Values.postgres.username }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.postgres.password }}
+        ports:
+        - containerPort: {{ .Values.postgres.port }}
+          name: postgres
+        resources:
+          {{- toYaml .Values.postgres.resources | nindent 10 }}
+        volumeMounts:
+        - name: pg-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: pg-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.postgres.storage.size }}
+

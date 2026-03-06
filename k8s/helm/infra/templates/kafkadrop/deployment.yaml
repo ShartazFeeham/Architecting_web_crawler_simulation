@@ -1,0 +1,32 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawler-kafkadrop
+  labels:
+    app: crawler-kafkadrop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-kafkadrop
+  template:
+    metadata:
+      labels:
+        app: crawler-kafkadrop
+    spec:
+      containers:
+      - name: kafkadrop
+        image: "{{ .Values.kafkadrop.image.repository }}:{{ .Values.kafkadrop.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.kafkadrop.port }}
+        env:
+        # Kafkadrop needs to know how to reach the Kafka cluster.
+        # It uses the headless service name we will define for Kafka.
+        - name: KAFKA_BROKERCONNECT
+          value: "crawler-kafka-headless:9092"
+        - name: JVM_OPTS
+          value: "-Xms32M -Xmx64M" # Explicitly lower Java memory footprint
+        resources:
+          {{- toYaml .Values.kafkadrop.resources | nindent 10 }}
+

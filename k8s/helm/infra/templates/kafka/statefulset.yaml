@@ -1,0 +1,70 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: crawler-kafka
+  labels:
+    app: crawler-kafka
+spec:
+  # CRITICAL: This MUST match the headless service name for pod DNS to work
+  serviceName: "crawler-kafka-headless"
+  replicas: {{ .Values.kafka.replicas }}
+  selector:
+    matchLabels:
+      app: crawler-kafka
+  template:
+    metadata:
+      labels:
+        app: crawler-kafka
+    spec:
+      containers:
+      - name: kafka
+        image: "{{ .Values.kafka.image.repository }}:{{ .Values.kafka.image.tag }}"
+        command:
+        - bash
+        - -c
+        - |
+          export KAFKA_BROKER_ID=${HOSTNAME##*-}
+          export KAFKA_ADVERTISED_LISTENERS="INTERNAL://${HOSTNAME}.crawler-kafka-headless.{{ .Release.Namespace }}.svc.cluster.local:19092,EXTERNAL://${HOSTNAME}.crawler-kafka-headless.{{ .Release.Namespace }}.svc.cluster.local:9092"
+          exec /etc/confluent/docker/run
+        env:
+        # Connect to the Zookeeper service we just created
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: "crawler-zookeeper:2181"
+        # Network listeners
+        - name: KAFKA_LISTENERS
+          value: "INTERNAL://:19092,EXTERNAL://:9092"
+        # How clients connect to this specific broker
+        # Evaluated dynamically in the command block above to prevent $(POD_NAME) parsing errors
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: "INTERNAL"
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "3" # Ensure offsets survive a pod crash
+        # CRITICAL: Tell the JVM to stay within the strict pod memory limits (max 512Mi)
+        - name: KAFKA_HEAP_OPTS
+          value: "{{ .Values.kafka.heapOpts }}"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - containerPort: {{ .Values.kafka.ports.client }}
+          name: external
+        - containerPort: {{ .Values.kafka.ports.internal }}
+          name: internal
+        resources:
+          {{- toYaml .Values.kafka.resources | nindent 10 }}
+        volumeMounts:
+        - name: kafka-data
+          mountPath: /var/lib/kafka/data
+  volumeClaimTemplates:
+  - metadata:
+      name: kafka-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.kafka.storage.size }}
+

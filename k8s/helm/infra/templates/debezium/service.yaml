@@ -1,0 +1,16 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: crawler-debezium
+  labels:
+    app: crawler-debezium
+spec:
+  ports:
+  - port: {{ .Values.debezium.port }}
+    targetPort: {{ .Values.debezium.port }}
+    name: api
+  selector:
+    app: crawler-debezium
+  type: ClusterIP
+

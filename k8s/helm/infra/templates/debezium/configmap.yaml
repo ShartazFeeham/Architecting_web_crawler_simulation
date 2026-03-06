@@ -1,0 +1,28 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crawler-debezium-config
+  labels:
+    app: crawler-debezium
+data:
+  pg-connector.json: |
+    {
+      "name": "crawler-pg-connector",
+      "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "crawler-pg-db",
+        "database.port": "{{ .Values.postgres.port }}",
+        "database.user": "{{ .Values.postgres.username }}",
+        "database.password": "{{ .Values.postgres.password }}",
+        "database.dbname": "{{ .Values.postgres.database }}",
+        "database.server.name": "crawler_pg_server",
+        "plugin.name": "pgoutput",
+        "slot.name": "debezium",
+        "publication.name": "debezium_publication",
+        "table.include.list": "public.urls",
+        "topic.prefix": "crawler"
+      }
+    }
+

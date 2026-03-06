@@ -1,0 +1,32 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: crawler-zookeeper
+  labels:
+    app: crawler-zookeeper
+spec:
+  serviceName: "crawler-zookeeper"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawler-zookeeper
+  template:
+    metadata:
+      labels:
+        app: crawler-zookeeper
+    spec:
+      containers:
+      - name: zookeeper
+        image: "{{ .Values.zookeeper.image.repository }}:{{ .Values.zookeeper.image.tag }}"
+        env:
+        - name: ZOOKEEPER_CLIENT_PORT
+          value: {{ .Values.zookeeper.port | quote }}
+        - name: ZOOKEEPER_TICK_TIME
+          value: "2000"
+        ports:
+        - containerPort: {{ .Values.zookeeper.port }}
+          name: client
+        resources:
+          {{- toYaml .Values.zookeeper.resources | nindent 10 }}
+
