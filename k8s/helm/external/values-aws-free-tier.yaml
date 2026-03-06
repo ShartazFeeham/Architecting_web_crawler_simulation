@@ -1,5 +1,5 @@
-# values-test.yaml - Configuration for the TEST environment
-# Use this for local testing or CI/CD pipelines
+# values-aws-free-tier.yaml - Configuration for low-resource environments
+# Optimized for high memory/CPU constraints (e.g., t2.micro)
 
 replicaCount: 1
 springProfile: prod

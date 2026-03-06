@@ -1,0 +1,57 @@
+# AWS Free Tier Configuration for Crawler Apps
+# Optimized for high memory/CPU constraints (e.g., t2.micro)
+
+global:
+  springProfile: prod
+
+apps:
+  url-discovery:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    hpa:
+      enabled: false
+
+  processor:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
+    hpa:
+      enabled: false
+
+  fetcher:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    hpa:
+      enabled: false
+    env:
+      PARSER_URL: http://parser.external.public.url/api/v1/parser/process
+      SENSOR_URL: http://sensor.crawler-apps.svc.cluster.local:8080/api/v1/sensor/inspect
+
+  sensor:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    env:
+      SENSOR_FAIL_RATE: "0.0" # Minimize noise in free tier

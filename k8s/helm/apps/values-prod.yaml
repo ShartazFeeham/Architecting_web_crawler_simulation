@@ -1,0 +1,64 @@
+# Production Configuration for Crawler Apps
+# High Availability and Robust Resources
+
+global:
+  springProfile: prod
+
+apps:
+  url-discovery:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      cpuTarget: 60
+
+  processor:
+    replicas: 3
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      cpuTarget: 80
+
+  fetcher:
+    replicas: 3
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      cpuTarget: 70
+    env:
+      PARSER_URL: http://parser.external.public.url/api/v1/parser/process
+      SENSOR_URL: http://sensor.crawler-apps.svc.cluster.local:8080/api/v1/sensor/inspect
+
+  sensor:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi

@@ -144,8 +144,8 @@ The heart of the external service distribution, structured for multi-environment
 
 - **`Chart.yaml`**: Contains the chart metadata, defining the **application version** and **helm chart naming** for registry indexing.
 - **`values.yaml`**: The primary configuration source. Defines base `image` details, default `service.port`, and `parserSettings` like `jitterMin` and `failRate`.
-- **`values-test.yaml`**: A specialized profile for local load tests. Swaps `springProfile` to `prod` and increases `resources.limits` to handle burst traffic during local stress tests.
-- **`values-prod.yaml`**: The production-ready config. Enables `autoscaling` with a `maxReplicas` of 10 and enforces strict `resources.requests` for stability on the Mac mini cluster.
+- **`values-aws-free-tier.yaml`**: Optimized for environments with extreme resource constraints (e.g., AWS t2.micro). Minimal pods and strict limits.
+- **`values-prod.yaml`**: The production-ready config. Enables `autoscaling` with a `maxReplicas` of 10 and enforces robust `resources.requests` for stability.
 
 ### 📂 Folder: `templates/`
 Core Kubernetes manifest blueprints that consume values for final rendering.
@@ -245,8 +245,14 @@ This chart deploys the core business logic: `url-discovery`, `processor`, `fetch
 
 #### 💻 Commands (Applications)
 ```bash
-  # Install or upgrade the crawler applications
+  # 1. Local Development (Default Values)
   helm upgrade --install crawler-apps ./k8s/helm/apps -n crawler-apps
+
+  # 2. AWS Free Tier (Aggressive Constraints)
+  helm upgrade --install crawler-apps ./k8s/helm/apps -f ./k8s/helm/apps/values-aws-free-tier.yaml -n crawler-apps
+
+  # 3. Enterprise Production (High Availability)
+  helm upgrade --install crawler-apps ./k8s/helm/apps -f ./k8s/helm/apps/values-prod.yaml -n crawler-apps
 ```
 
 Verify the application status using the management console:
