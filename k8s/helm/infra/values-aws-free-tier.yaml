@@ -25,14 +25,14 @@ kafka:
   # CRITICAL: We can only afford ONE Kafka broker on the Free Tier, so we override the replica count 
   # to preserve precious MBs of RAM.
   replicas: 1
-  heapOpts: "-Xms64M -Xmx128M"
+  heapOpts: "-Xms128M -Xmx256M"
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi
     limits:
       cpu: 250m
-      memory: 256Mi
+      memory: 512Mi
 
 kafkadrop:
   resources:
@@ -44,11 +44,11 @@ kafkadrop:
       memory: 128Mi
 
 debezium:
-  heapOpts: "-Xms64M -Xmx128M"
+  heapOpts: "-Xms256M -Xmx512M"
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi
     limits:
       cpu: 250m
-      memory: 256Mi
+      memory: 1Gi

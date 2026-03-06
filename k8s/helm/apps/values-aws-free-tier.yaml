@@ -9,11 +9,11 @@ apps:
     replicas: 1
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
         cpu: 200m
         memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi
     hpa:
       enabled: false
 
@@ -21,11 +21,11 @@ apps:
     replicas: 1
     resources:
       requests:
-        cpu: 100m
+        cpu: 200m
         memory: 256Mi
       limits:
-        cpu: 300m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 768Mi
     hpa:
       enabled: false
 
@@ -33,11 +33,11 @@ apps:
     replicas: 1
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
         cpu: 200m
         memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi
     hpa:
       enabled: false
     env:
@@ -48,10 +48,10 @@ apps:
     replicas: 1
     resources:
       requests:
-        cpu: 50m
+        cpu: 100m
         memory: 128Mi
       limits:
-        cpu: 200m
-        memory: 256Mi
+        cpu: 500m
+        memory: 512Mi
     env:
       SENSOR_FAIL_RATE: "0.0" # Minimize noise in free tier
