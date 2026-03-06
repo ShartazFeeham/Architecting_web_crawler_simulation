@@ -85,6 +85,7 @@ All utility scripts and configurations are located in the `docs-and-tools` direc
 - `test_deep_inspector_local.sh` / `_docker.sh`: End-to-end validation scripts that verify the flow from discovery to final processing.
 
 ### Kubernetes & Scaling Validation
+- `test_k8s.sh`: The **Main Management Console**. Provides a menu-driven interface for Helm upgrades, deep cleans, cluster status monitoring, and end-to-end pipeline testing.
 - `external-parser-test.sh`: A specialized stress-testing utility used to hit the public Ingress URL with massive parallel load. Its primary purpose is to trigger and verify Kubernetes Horizontal Pod Autoscaling (HPA) by saturating pod resources.
 <hr>
 
@@ -183,14 +184,29 @@ Connect to the Postgres database directly from within the pod:
 *(When prompted for a password, enter: `password`)*
 
 Access the **Kafkadrop UI** by adding the Ingress host to your local machine's `/etc/hosts` file:
-```bash
-  sudo nano /etc/hosts
-```
-Add this line at the bottom:
 ```text
   127.0.0.1 kafka.crawler.public.url
 ```
-Then open your browser to: `http://kafka.crawler.public.url`
+
+### ⛵ Crawler Applications (`crawler-apps`)
+This chart deploys the core business logic: `url-discovery`, `processor`, `fetcher`, and `sensor`. It is designed to be deployed after the infrastructure is ready.
+
+#### 💡 Key Features:
+- **Resilience:** Configured with specific failure rates (e.g., 5% sensor failure, 10% parser failure) to simulate real-world conditions.
+- **Dynamic Scaling:** Includes Horizontal Pod Autoscalers (HPA) for all services to handle spikes in URL generation.
+- **Optimized Routing:** The `fetcher` service is configured to call the `parser-external` via its Nginx Ingress link, ensuring realistic external service simulation.
+
+#### 💻 Commands (Applications)
+```bash
+  # Install or upgrade the crawler applications
+  helm upgrade --install crawler-apps ./k8s/helm/apps -n crawler-apps
+```
+
+Verify the application status using the management console:
+```bash
+  ./docs-and-tools/test_k8s.sh
+```
+*(Choose Option 4 to see pod health and HPA metrics)*
 
 
 
