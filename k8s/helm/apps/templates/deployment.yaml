@@ -1,0 +1,69 @@
+{{- range $appName, $appConfig := .Values.apps }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $appName }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    app: {{ $appName }}
+spec:
+  {{- if not (and $appConfig.hpa (default false $appConfig.hpa.enabled)) }}
+  replicas: {{ $appConfig.replicas | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ $appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $appName }}
+    spec:
+      hostAliases:
+      - ip: {{ $.Values.global.ingressIP | quote }}
+        hostnames:
+        - "discovery.crawler.public.url"
+        - "processor.crawler.public.url"
+        - "parser.external.public.url"
+        - "kafka.crawler.public.url"
+      containers:
+      - name: {{ $appName }}
+        image: {{ $appConfig.image }}
+        ports:
+        - containerPort: {{ $appConfig.containerPort }}
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: {{ $.Values.global.springProfile }}
+        - name: KAFKA_URL
+          value: {{ $.Values.global.kafkaUrl }}
+        - name: DB_URL
+          value: {{ $.Values.global.dbUrl }}
+        - name: DB_USER
+          value: {{ $.Values.global.dbUser }}
+        - name: DB_PASSWORD
+          value: {{ $.Values.global.dbPassword }}
+        - name: KAFKA_TOPIC_DISCOVERY_URLS
+          value: {{ $.Values.topics.discoveryUrls }}
+        - name: KAFKA_TOPIC_FETCHER_RESULTS
+          value: {{ $.Values.topics.fetcherResults }}
+        - name: KAFKA_TOPIC_PUBLIC_CRAWL_RECORDS
+          value: {{ $.Values.topics.publicCrawlRecords }}
+        {{- if $appConfig.env }}
+        {{- range $key, $value := $appConfig.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        resources:
+          {{- toYaml $appConfig.resources | nindent 10 }}
+        livenessProbe:
+          tcpSocket:
+            port: {{ $appConfig.containerPort }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: {{ $appConfig.containerPort }}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+{{- end }}

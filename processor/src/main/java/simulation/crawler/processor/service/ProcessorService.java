@@ -1,8 +1,8 @@
 package simulation.crawler.processor.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,11 +11,14 @@ import simulation.crawler.processor.entity.CrawlRecord;
 import simulation.crawler.processor.repository.CrawlRecordRepository;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class ProcessorService {
+    private static final Logger log = LoggerFactory.getLogger(ProcessorService.class);
     private final CrawlRecordRepository repository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public ProcessorService(CrawlRecordRepository repository) {
+        this.repository = repository;
+    }
 
     @KafkaListener(topics = "${kafka.topic.discovery-urls:crawler.discovery.urls}", groupId = "processor-group")
     @Transactional
@@ -25,11 +28,10 @@ public class ProcessorService {
             log.info("Received discovery event for URL: {}", event.getUrl());
 
             if (repository.findByUrl(event.getUrl()).isEmpty()) {
-                CrawlRecord record = CrawlRecord.builder()
-                        .url(event.getUrl())
-                        .processId(event.getProcessId())
-                        .status("PENDING")
-                        .build();
+                CrawlRecord record = new CrawlRecord();
+                record.setUrl(event.getUrl());
+                record.setProcessId(event.getProcessId());
+                record.setStatus("PENDING");
                 repository.save(record);
                 log.info("Successfully saved new discovery record to DB: {}", event.getUrl());
             } else {

@@ -21,7 +21,7 @@ data:
         "plugin.name": "pgoutput",
         "slot.name": "debezium",
         "publication.name": "debezium_publication",
-        "table.include.list": "public.urls",
+        "table.include.list": "public.crawl_records",
         "topic.prefix": "crawler"
       }
     }

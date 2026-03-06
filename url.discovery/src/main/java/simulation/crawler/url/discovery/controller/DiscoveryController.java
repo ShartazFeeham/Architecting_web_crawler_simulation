@@ -6,9 +6,12 @@ import simulation.crawler.url.discovery.service.DiscoveryService;
 
 @RestController
 @RequestMapping("/api/v1/discovery")
-@RequiredArgsConstructor
 public class DiscoveryController {
     private final DiscoveryService discoveryService;
+
+    public DiscoveryController(DiscoveryService discoveryService) {
+        this.discoveryService = discoveryService;
+    }
 
     @PostMapping("/generate")
     public Long generate(@RequestParam(required = false) Integer count) {

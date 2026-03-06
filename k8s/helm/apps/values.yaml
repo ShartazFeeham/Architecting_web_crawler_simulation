@@ -1,0 +1,94 @@
+# Global configurations
+global:
+  namespace: crawler-apps
+  # Points to the infrastructure services
+  kafkaUrl: crawler-kafka.crawler-infrastructure.svc.cluster.local:9092
+  dbUrl: jdbc:postgresql://crawler-pg-db.crawler-infrastructure.svc.cluster.local:5432/crawler_db
+  dbUser: user
+  dbPassword: password
+  springProfile: prod
+  ingressIP: 10.100.137.161
+
+# Shared topic names
+topics:
+  discoveryUrls: crawler.discovery.urls
+  fetcherResults: crawler.fetcher.results
+  publicCrawlRecords: crawler.public.crawl_records
+
+# Microservices configuration
+apps:
+  url-discovery:
+    image: feeham/crawler-url-discovery:1.0
+    containerPort: 8080
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    ingress:
+      enabled: true
+      host: discovery.crawler.public.url
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      cpuTarget: 50
+
+  processor:
+    image: feeham/crawler-processor:1.0
+    containerPort: 8080
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    ingress:
+      enabled: true
+      host: processor.crawler.public.url
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      cpuTarget: 80
+
+  fetcher:
+    image: feeham/crawler-fetcher:1.0
+    containerPort: 8080
+    replicas: 2 # Scale workers
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      cpuTarget: 70
+    env:
+      PARSER_URL: http://parser.external.public.url/api/v1/parser/process
+      SENSOR_URL: http://sensor.crawler-apps.svc.cluster.local:8080/api/v1/sensor/inspect
+
+  sensor:
+    image: feeham/crawler-sensor:1.0
+    containerPort: 8080
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    env:
+      SENSOR_FAIL_RATE: "0.05"
+      SENSOR_JITTER_MIN: "100"
+      SENSOR_JITTER_MAX: "500"

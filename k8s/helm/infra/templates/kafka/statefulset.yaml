@@ -26,6 +26,8 @@ spec:
         - |
           export KAFKA_BROKER_ID=${HOSTNAME##*-}
           export KAFKA_ADVERTISED_LISTENERS="INTERNAL://${HOSTNAME}.crawler-kafka-headless.{{ .Release.Namespace }}.svc.cluster.local:19092,EXTERNAL://${HOSTNAME}.crawler-kafka-headless.{{ .Release.Namespace }}.svc.cluster.local:9092"
+          # Wipe stale cluster ID to prevent CrashLoopBackOff on cluster restart
+          rm -f /var/lib/kafka/data/meta.properties
           exec /etc/confluent/docker/run
         env:
         # Connect to the Zookeeper service we just created

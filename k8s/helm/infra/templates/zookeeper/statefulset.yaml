@@ -27,6 +27,17 @@ spec:
         ports:
         - containerPort: {{ .Values.zookeeper.port }}
           name: client
+        volumeMounts:
+        - name: zookeeper-data
+          mountPath: /var/lib/zookeeper/data
         resources:
           {{- toYaml .Values.zookeeper.resources | nindent 10 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: zookeeper-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.zookeeper.storage.size }}
 

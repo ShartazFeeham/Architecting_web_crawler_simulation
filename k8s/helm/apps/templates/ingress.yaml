@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: crawler-apps-ingress
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  {{- range $appName, $appConfig := .Values.apps }}
+  {{- if $appConfig.ingress }}
+  {{- if $appConfig.ingress.enabled }}
+  - host: {{ $appConfig.ingress.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ $appName }}
+            port:
+              number: 8080
+  {{- end }}
+  {{- end }}
+  {{- end }}

@@ -1,7 +1,7 @@
 package simulation.crawler.fetcher.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -12,13 +12,9 @@ import simulation.crawler.fetcher.dto.SensorResponse;
 
 import java.util.Optional;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class ExternalServiceClient {
+    private static final Logger log = LoggerFactory.getLogger(ExternalServiceClient.class);
     private final RestTemplate restTemplate;
 
     public ExternalServiceClient() {

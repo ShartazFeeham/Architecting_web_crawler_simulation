@@ -1,7 +1,7 @@
 package simulation.crawler.url.discovery.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -9,11 +9,14 @@ import org.springframework.stereotype.Service;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class DiscoveryService {
+    private static final Logger log = LoggerFactory.getLogger(DiscoveryService.class);
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final Random random = new Random();
+
+    public DiscoveryService(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Value("${discovery.max-count:100000}")
     private int maxCount;

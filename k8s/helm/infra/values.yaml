@@ -45,6 +45,8 @@ zookeeper:
     limits:
       cpu: 500m
       memory: 512Mi
+  storage:
+    size: 1Gi
 
 kafka:
 

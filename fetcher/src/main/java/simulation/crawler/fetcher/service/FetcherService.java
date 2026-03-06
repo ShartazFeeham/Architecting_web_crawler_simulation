@@ -1,8 +1,8 @@
 package simulation.crawler.fetcher.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -11,51 +11,57 @@ import simulation.crawler.fetcher.dto.FetcherResultEvent;
 import simulation.crawler.fetcher.dto.ParserResponse;
 import simulation.crawler.fetcher.dto.SensorResponse;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class FetcherService {
+    private static final Logger log = LoggerFactory.getLogger(FetcherService.class);
     private final ExternalServiceClient client;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public FetcherService(ExternalServiceClient client, KafkaTemplate<String, String> kafkaTemplate) {
+        this.client = client;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Value("${kafka.topic.fetcher-results:crawler.fetcher.results}")
     private String fetcherResultsTopic;
 
     @KafkaListener(topics = "${kafka.topic.public-crawl-records:crawler.public.crawl_records}", groupId = "fetcher-group")
-    public void consumeNewUrls(List<String> messages) {
-        log.info("Received batch of {} messages from outbox Kafka topic", messages.size());
+    public void consumeNewUrls(String message) {
+        log.info("Received message from outbox Kafka topic");
 
-        for (String message : messages) {
-            try {
-                Map<?, ?> event = objectMapper.readValue(message, Map.class);
-                Map<?, ?> payload = event.containsKey("payload") ? (Map<?, ?>) event.get("payload") : event;
-                Map<?, ?> after = (Map<?, ?>) payload.get("after");
-                if (after == null) {
-                    log.warn("Skipping message because 'after' payload is null (might be a delete event)");
-                    continue;
-                }
-                String url = (String) after.get("url");
-
-                log.info("Received URL from outbox, spawning Virtual Thread: {}", url);
-                Thread.startVirtualThread(() -> {
-                    try {
-                        processUrl(url);
-                    } catch (Exception ex) {
-                        log.error("Virtual Thread failed to process URL: {}", url, ex);
-                    }
-                });
-
-            } catch (Exception e) {
-                log.error("Failed to parse URL event from topic: {}", e.getMessage(), e);
+        try {
+            Map<?, ?> event = objectMapper.readValue(message, Map.class);
+            Map<?, ?> payload = event.containsKey("payload") ? (Map<?, ?>) event.get("payload") : event;
+            Map<?, ?> after = (Map<?, ?>) payload.get("after");
+            if (after == null) {
+                log.warn("Skipping message because 'after' payload is null (might be a delete event)");
+                return;
             }
+
+            // Loop Prevention: Only process if status is PENDING
+            String status = (String) after.get("status");
+            if (!"PENDING".equalsIgnoreCase(status)) {
+                log.debug("Skipping non-PENDING event (Status: {})", status);
+                return;
+            }
+
+            String url = (String) after.get("url");
+
+            log.info("Received PENDING URL from outbox, spawning Virtual Thread: {}", url);
+            Thread.startVirtualThread(() -> {
+                try {
+                    processUrl(url);
+                } catch (Exception ex) {
+                    log.error("Virtual Thread failed to process URL: {}", url, ex);
+                }
+            });
+
+        } catch (Exception e) {
+            log.error("Failed to parse URL event from topic: {}", e.getMessage(), e);
         }
     }
 
@@ -99,13 +105,12 @@ public class FetcherService {
 
     private void publishResult(String url, boolean success, String parsingData, Boolean censored, String sensorData)
             throws Exception {
-        FetcherResultEvent result = FetcherResultEvent.builder()
-                .url(url)
-                .success(success)
-                .parsingData(parsingData)
-                .censored(censored)
-                .sensorData(sensorData)
-                .build();
+        FetcherResultEvent result = new FetcherResultEvent(
+                url,
+                success,
+                parsingData,
+                censored,
+                sensorData);
 
         kafkaTemplate.send(fetcherResultsTopic, objectMapper.writeValueAsString(result));
         log.info("Published final results to {} for URL: {} (Success: {})", fetcherResultsTopic, url, success);

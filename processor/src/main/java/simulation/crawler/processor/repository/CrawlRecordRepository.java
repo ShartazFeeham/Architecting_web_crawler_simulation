@@ -10,5 +10,10 @@ import java.util.Optional;
 @Repository
 public interface CrawlRecordRepository extends JpaRepository<CrawlRecord, Long> {
     Optional<CrawlRecord> findByUrl(String url);
+
     List<CrawlRecord> findByProcessId(Long processId);
+
+    long countByStatus(String status);
+
+    long countByCensoredTrue();
 }
