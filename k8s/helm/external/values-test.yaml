@@ -7,7 +7,7 @@ springProfile: prod
 parserSettings:
   jitterMin: 100
   jitterMax: 1000
-  failRate: 0.25
+  failRate: 0.1
 
 image:
   repository: feeham/crawler-parser

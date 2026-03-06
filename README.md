@@ -106,7 +106,7 @@ Core Kubernetes manifest blueprints that consume values for final rendering.
 - **`deployment.yaml`**: The main workload spec. Injects environment variables like `SPRING_PROFILES_ACTIVE` and sets up `livenessProbe` and `readinessProbe` to ensure zero-downtime updates.
 - **`service.yaml`**: An abstraction layer that maps external traffic to the actual `containerPort` defined in the specific environment profile.
 - **`ingress.yaml`**: Configures the **Nginx Ingress Controller** to route traffic from the host `parser.external.public.url` to the internal service.
-- **`hpa.yaml`**: Scales the pod count dynamically between `minReplicas` and `maxReplicas` based on the `targetCPUUtilizationPercentage` (currently calibrated to `40%`).
+- **`hpa.yaml`**: Scales the pod count dynamically between `minReplicas` and `maxReplicas` based on the `targetCPUUtilizationPercentage` (currently calibrated to `80%`).
 
 ### 💻 Commands
 Deployment and management utilities for the external parser service.
