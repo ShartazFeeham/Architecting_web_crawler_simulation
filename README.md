@@ -38,3 +38,5 @@ cd fetcher
 ```
 
 Repeat for each service (start Kafka first). See `docs and infra/` for the overall design and infrastructure setup.
+
+<!-- sync-marker-1 -->
